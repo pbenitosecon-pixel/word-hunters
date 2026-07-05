@@ -351,13 +351,20 @@ function startMusic(suspense) {
   if (lastSuspense === suspense && musicIv) return;
   stopMusic(false);
   lastSuspense = suspense;
-  const notes = suspense ? [196, 207.65, 220, 233.08] : [261.63, 329.63, 392, 329.63];
+  const notes = suspense
+    ? [174.61, 196, 185, 220, 207.65, 246.94]
+    : [220, 277.18, 329.63, 369.99, 329.63, 277.18, 246.94, 293.66];
   let i = 0;
   musicIv = setInterval(() => {
-    playTone(notes[i++ % notes.length], suspense ? 0.16 : 0.28, suspense ? 0.07 : 0.045, suspense ? 'sawtooth' : 'triangle');
-  }, suspense ? 280 : 650);
+    const note = notes[i++ % notes.length];
+    playTone(note, suspense ? 0.14 : 0.34, suspense ? 0.055 : 0.04, suspense ? 'square' : 'sine');
+    if (!suspense && i % 4 === 0) playTone(note / 2, 0.42, 0.026, 'triangle');
+  }, suspense ? 240 : 520);
   if (suspense) {
-    suspenseIv = setInterval(() => playTone(98, 0.08, 0.035, 'square'), 900);
+    suspenseIv = setInterval(() => {
+      playTone(87.31, 0.09, 0.035, 'sawtooth');
+      setTimeout(() => playTone(130.81, 0.06, 0.025, 'square'), 120);
+    }, 720);
   }
 }
 
