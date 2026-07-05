@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="es" translate="no" class="notranslate">
+<head>
+<meta charset="UTF-8">
+<meta name="google" content="notranslate">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Word Hunters 🔍</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;background:#0f172a;font-family:system-ui,-apple-system,sans-serif;color:#f1f5f9;overflow-x:hidden}
+input,select,button{font-family:inherit}
+#toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);padding:9px 22px;border-radius:999px;
+  font-weight:800;font-size:13px;z-index:9999;white-space:nowrap;box-shadow:0 4px 20px #0008;
+  opacity:0;transition:opacity .3s;pointer-events:none}
+#toast.show{opacity:1}
+.card{background:#1e293b;border:1px solid #334155;border-radius:16px;padding:18px}
+#board-wrap{overflow:auto;max-width:100vw;-webkit-overflow-scrolling:touch}
+#board{display:inline-grid;gap:2px;padding:8px;background:#1e293b;border-radius:14px;border:1px solid #334155}
+.cell{width:32px;height:32px;min-width:32px;min-height:32px;display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:14px;border-radius:5px;cursor:pointer;background:#334155;color:#94a3b8;
+  transition:background .06s,transform .06s;user-select:none;-webkit-user-select:none;touch-action:none;overflow:hidden}
+.cell.sel{color:#fff;transform:scale(1.1);box-shadow:0 2px 10px #0006;z-index:2;position:relative}
+.cell.found{color:#fff}
+@media(max-width:400px){.cell{width:27px;height:27px;min-width:27px;min-height:27px;font-size:11px}}
+.screen{display:none;width:100%;padding:10px 8px}
+.screen.active{display:block}
+#screen-game{display:none;flex-direction:column;align-items:center;padding:8px 4px}
+#screen-game.active{display:flex}
+#hud{width:100%;max-width:940px;background:#1e293b;border:1px solid #334155;border-radius:14px;
+  padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;gap:8px}
+#players-bar{width:100%;max-width:940px;display:flex;gap:6px;margin-bottom:7px;overflow-x:auto;padding-bottom:2px;flex-shrink:0}
+.p-chip{flex-shrink:0;background:#1e293b;border:2px solid transparent;border-radius:10px;padding:5px 10px;display:flex;align-items:center;gap:5px}
+.p-chip.me{border-color:#3b82f6}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+#wordlist{background:#1e293b;border:1px solid #334155;border-radius:14px;padding:12px;min-width:148px;width:152px;flex-shrink:0;align-self:flex-start}
+#wordlist h4{color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #334155;padding-bottom:7px;margin-bottom:8px}
+.witem{display:flex;align-items:center;justify-content:space-between;border-radius:6px;padding:5px 9px;margin-bottom:4px}
+.witem.pending{background:#0f172a}
+.witem.mine{background:#1e3a5f}
+.witem.done{background:#064e3b}
+.wn{font-size:11px;font-weight:700;letter-spacing:.5px;color:#94a3b8}
+.witem.mine .wn{color:#93c5fd}
+.witem.done .wn{color:#6ee7b7;text-decoration:line-through}
+.wfd{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.link-box{background:#0f172a;border:1px solid #334155;border-radius:12px;padding:12px 14px;margin-bottom:12px}
+.link-box p{color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.url-row{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.url-txt{flex:1;background:#1e293b;border:1px solid #475569;border-radius:7px;padding:8px 10px;color:#38bdf8;
+  font-size:12px;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.btn-copy{background:#334155;color:#e2e8f0;border:none;border-radius:7px;padding:8px 12px;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap}
+.btn-wa{background:#25D366;color:#fff;border:none;border-radius:7px;padding:8px 12px;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.btn{border:none;border-radius:10px;padding:12px 0;font-weight:800;font-size:15px;cursor:pointer;width:100%;transition:all .15s;margin-top:8px}
+.btn-green{background:#10b981;color:#fff}.btn-green:hover{background:#059669}
+.btn-green:disabled{background:#1e293b;color:#475569;cursor:default}
+.btn-blue{background:#3b82f6;color:#fff}.btn-blue:hover{background:#2563eb}
+.btn-red{background:#dc2626;color:#fff}.btn-red:hover{background:#b91c1c}
+.btn-ghost{background:#0f172a;color:#cbd5e1;border:1px solid #334155}.btn-ghost:hover{background:#1e293b}
+.cfg-input{width:100%;background:#0f172a;color:#f1f5f9;border:1px solid #475569;border-radius:8px;padding:8px 9px;font-size:13px;outline:none}
+.prow{display:flex;align-items:center;gap:10px;background:#0f172a;border-radius:9px;padding:8px 12px;margin-bottom:6px}
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+@media(min-width:400px){.cfg-grid{grid-template-columns:1.25fr 1fr 1fr}}
+.cfg-label{color:#64748b;font-size:10px;margin-bottom:5px}
+select.cfg{width:100%;background:#0f172a;color:#f1f5f9;border:1px solid #475569;border-radius:8px;padding:8px 6px;font-size:13px}
+.lb-row{display:flex;align-items:center;gap:10px;padding:10px 8px;border-bottom:1px solid #0f172a}
+.lb-row:last-child{border:none}
+.lb-pos{width:28px;font-size:16px;text-align:center}
+.lb-name{flex:1;color:#e2e8f0;font-weight:600;font-size:14px}
+.lb-sub{color:#64748b;font-size:11px}
+.lb-pts{color:#fff;font-weight:900;font-size:15px}
+#min-warn{color:#f59e0b;font-size:12px;text-align:center;margin-top:8px;display:none}
+.prog-bar{height:5px;background:#1e3a5f;border-radius:99px;margin-top:3px;overflow:hidden;width:80px;margin-left:auto}
+.prog-fill{height:100%;background:#3b82f6;border-radius:99px;transition:width .4s}
+.game-actions{width:100%;max-width:940px;display:flex;gap:8px;justify-content:flex-end;margin-bottom:7px}
+.game-actions .btn{width:auto;margin:0;padding:8px 12px;font-size:12px;border-radius:8px}
+.history-card{margin-top:10px}
+.hist-row{border-top:1px solid #0f172a;padding:10px 0;text-align:left}
+.hist-row:first-child{border-top:0;padding-top:0}
+.hist-title{font-size:13px;font-weight:800;color:#e2e8f0}
+.hist-meta{font-size:10px;color:#64748b;margin:2px 0 6px}
+.hist-results{font-size:11px;color:#94a3b8;line-height:1.5}
+</style>
+</head>
+<body translate="no" class="notranslate">
+<div id="toast"></div>
+
+<!-- ══ LOGIN ══ -->
+<div id="screen-login" class="screen active" style="max-width:420px;margin:0 auto;padding-top:48px;text-align:center">
+  <div style="font-size:52px;margin-bottom:10px">🔍</div>
+  <h1 style="font-size:28px;font-weight:900;letter-spacing:-1px;margin-bottom:4px">Word Hunters</h1>
+  <p style="color:#64748b;font-size:13px;margin-bottom:26px">Sopa de letras multijugador en tiempo real</p>
+  <div class="card">
+    <div class="link-box" id="lb-login" style="display:none">
+      <p>Comparte este link con tus amigos</p>
+      <div class="url-row">
+        <div class="url-txt" id="url1">—</div>
+        <button class="btn-copy" onclick="copyLink()">Copiar</button>
+        <button class="btn-wa" onclick="shareWa()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+          WhatsApp
+        </button>
+      </div>
+    </div>
+    <input id="name-in" placeholder="Tu nombre..." maxlength="16"
+      style="width:100%;background:#0f172a;border:1px solid #475569;border-radius:10px;
+        padding:12px 16px;color:#f1f5f9;font-size:16px;margin-bottom:10px;outline:none;display:block"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn btn-green" style="margin-top:0" onclick="doLogin()">ENTRAR AL LOBBY 🚀</button>
+  </div>
+</div>
+
+<!-- ══ LOBBY ══ -->
+<div id="screen-lobby" class="screen" style="max-width:460px;margin:0 auto;padding-top:18px">
+  <h2 style="text-align:center;font-size:20px;font-weight:900;margin-bottom:14px">🔍 Sala de Espera</h2>
+  <div class="link-box">
+    <p>Invita amigos — comparte este link</p>
+    <div class="url-row">
+      <div class="url-txt" id="url2">—</div>
+      <button class="btn-copy" onclick="copyLink()">Copiar</button>
+      <button class="btn-wa" onclick="shareWa()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+        WhatsApp
+      </button>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:10px">
+    <p style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Jugadores conectados</p>
+    <div id="player-list"></div>
+  </div>
+  <div class="card" id="admin-cfg" style="display:none;margin-bottom:10px">
+    <p style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Configuración de la partida</p>
+    <div style="margin-bottom:10px">
+      <div class="cfg-label">Nombre del torneo</div>
+      <input id="cfg-name" class="cfg-input" maxlength="40" placeholder="Torneo del día">
+    </div>
+    <div class="cfg-grid">
+      <div>
+        <div class="cfg-label">Categoría</div>
+        <select id="cfg-cat" class="cfg">
+          <option value="ALEATORIO">🎲 Aleatoria</option>
+          <option value="NEGOCIOS">💼 Negocios</option>
+          <option value="ANIMALES">🐾 Animales</option>
+          <option value="PAISES">🌍 Países</option>
+          <option value="DEPORTES">⚽ Deportes</option>
+          <option value="COLORES">🎨 Colores</option>
+          <option value="FRUTAS">🍎 Frutas</option>
+          <option value="PROFESIONES">👷 Profesiones</option>
+          <option value="TECNOLOGIA">💻 Tecnología</option>
+          <option value="MUSICA">🎵 Música</option>
+          <option value="CIENCIA">🔬 Ciencia</option>
+          <option value="HISTORIA">🏛️ Historia</option>
+          <option value="NATURALEZA">🌋 Naturaleza</option>
+          <option value="COCINA">🍽️ Cocina</option>
+          <option value="ROPA">👗 Ropa</option>
+          <option value="TRANSPORTE">🚀 Transporte</option>
+        </select>
+      </div>
+      <div>
+        <div class="cfg-label">Rondas</div>
+        <select id="cfg-rounds" class="cfg">
+          <option value="1">1</option>
+          <option value="3" selected>3</option>
+          <option value="5">5</option>
+        </select>
+      </div>
+      <div>
+        <div class="cfg-label">Tiempo</div>
+        <select id="cfg-time" class="cfg">
+          <option value="300" selected>5 min</option>
+          <option value="600">10 min</option>
+          <option value="900">15 min</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-green" onclick="startGame()">🚀 INICIAR PARTIDA</button>
+    <p id="min-warn">⚠️ Se necesitan mínimo 2 jugadores</p>
+  </div>
+  <div class="card" id="wait-msg" style="display:none;text-align:center">
+    <p style="color:#64748b;font-size:13px">Esperando que el admin inicie la partida...</p>
+  </div>
+  <div class="card history-card" id="history-lobby"></div>
+  <button class="btn btn-red" style="margin-top:10px" onclick="leaveGame()">Salir</button>
+</div>
+
+<!-- ══ JUEGO ══ -->
+<div id="screen-game" class="screen">
+  <div id="hud">
+    <div>
+      <div style="color:#64748b;font-size:9px;text-transform:uppercase;letter-spacing:1px">Ronda</div>
+      <div style="font-weight:900;font-size:18px" id="hud-round">1/1</div>
+      <div style="color:#3b82f6;font-size:10px;font-weight:700" id="hud-cat">—</div>
+    </div>
+    <svg id="ring" width="54" height="54" viewBox="0 0 54 54">
+      <circle cx="27" cy="27" r="21" fill="none" stroke="#1e3a5f" stroke-width="5"/>
+      <circle id="ring-arc" cx="27" cy="27" r="21" fill="none" stroke="#22c55e" stroke-width="5"
+        stroke-dasharray="131.9" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 27 27)"
+        style="transition:stroke-dashoffset .5s linear,stroke .5s"/>
+      <text id="ring-n" x="27" y="32" text-anchor="middle" font-size="11" font-weight="bold" fill="#22c55e">—</text>
+    </svg>
+    <div style="text-align:right">
+      <div style="color:#64748b;font-size:9px;text-transform:uppercase;letter-spacing:1px">Mis palabras</div>
+      <div style="color:#f1f5f9;font-weight:900;font-size:20px" id="hud-mywords">0/0</div>
+      <div class="prog-bar"><div class="prog-fill" id="hud-prog" style="width:0%"></div></div>
+    </div>
+  </div>
+  <div class="game-actions">
+    <button class="btn btn-ghost" id="audio-btn" onclick="toggleAudio()">Audio: sí</button>
+    <button class="btn btn-red" onclick="leaveGame()">Abandonar partida</button>
+  </div>
+  <div id="players-bar"></div>
+  <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;justify-content:center;width:100%;max-width:940px">
+    <div id="board-wrap"><div id="board"></div></div>
+    <div id="wordlist"><h4>Palabras <span id="wcount">0/0</span></h4><div id="witems"></div></div>
+  </div>
+</div>
+
+<!-- ══ INTERMISSION ══ -->
+<div id="screen-inter" class="screen" style="max-width:420px;margin:0 auto;padding-top:32px;text-align:center">
+  <div style="background:#1e3a5f;border:1px solid #3b82f6;border-radius:14px;padding:16px;margin-bottom:14px">
+    <div style="font-size:36px;margin-bottom:6px">🏆</div>
+    <div style="color:#fbbf24;font-size:20px;font-weight:900" id="inter-winner"></div>
+    <div style="color:#94a3b8;font-size:12px;margin-top:4px" id="inter-reason"></div>
+  </div>
+  <p style="color:#64748b;margin-bottom:18px;font-size:13px">Siguiente ronda en <span id="inter-cd" style="color:#3b82f6;font-weight:700">6</span>s...</p>
+  <div class="card" id="lb-inter"></div>
+</div>
+
+<!-- ══ END ══ -->
+<div id="screen-end" class="screen" style="max-width:420px;margin:0 auto;padding-top:28px;text-align:center">
+  <div style="font-size:50px;margin-bottom:8px">🏆</div>
+  <h1 style="color:#fbbf24;font-size:26px;font-weight:900;margin-bottom:4px">¡Partida Finalizada!</h1>
+  <p style="font-size:15px;font-weight:700;margin-bottom:4px" id="winner-lbl"></p>
+  <p style="color:#64748b;font-size:12px;margin-bottom:20px" id="win-reason-lbl"></p>
+  <div class="card" style="margin-bottom:16px" id="lb-end"></div>
+  <div class="card history-card" style="margin-bottom:16px" id="history-end"></div>
+  <button class="btn btn-blue" style="max-width:280px;margin:0 auto;display:none" id="btn-reset" onclick="doReset()">🔄 Nueva partida</button>
+  <p id="reset-note" style="color:#475569;font-size:12px;margin-top:8px;display:none">El admin puede iniciar otra partida</p>
+  <button class="btn btn-red" style="max-width:280px;margin:8px auto 0;display:block" onclick="leaveGame()">Salir</button>
+</div>
+
+<script>
+if (window.location.protocol === 'file:') {
+  window.location.href = 'http://localhost:3001/';
+}
+</script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// ── ESTADO LOCAL ─────────────────────────────────────────────────────────────
+const socket = io();
+let myId = '', myColor = '#3b82f6', isAdmin = false;
+let G = null;
+let hasJoined = false, pendingName = null;
+let lastBoardSig = '';
+let selCells = [], pressing = false, selDir = null;
+let timerIv = null, interIv = null;
+let audioEnabled = true, audioCtx = null, musicGain = null, musicIv = null, suspenseIv = null;
+let lastSuspense = false;
+const CIRC = 131.9;
+const PUBLIC_SHARE_URL = '';
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function getUrl() {
+  const isLocal = ['localhost', '127.0.0.1', ''].includes(window.location.hostname) || window.location.protocol === 'file:';
+  return isLocal && PUBLIC_SHARE_URL ? PUBLIC_SHARE_URL : window.location.origin + window.location.pathname;
+}
+
+function setUrls() {
+  const u = getUrl();
+  ['url1','url2'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = u; });
+  document.getElementById('lb-login').style.display = 'block';
+}
+
+function copyLink() {
+  navigator.clipboard.writeText(getUrl()).then(() => toast('¡Link copiado! 📋', '#1e293b', '#f1f5f9'));
+}
+
+function shareWa() {
+  window.open('https://wa.me/?text=' + encodeURIComponent('¡Juega Word Hunters conmigo! 🔍\n' + getUrl()), '_blank');
+}
+
+let toastTm;
+function toast(msg, bg, col) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.style.background = bg || '#fbbf24'; el.style.color = col || '#78350f';
+  el.classList.add('show'); clearTimeout(toastTm);
+  toastTm = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+}
+
+function shortDate(iso) {
+  return new Date(iso).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function renderHistory(targetId) {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  const items = (G?.history || []).slice(0, 6);
+  if (!items.length) {
+    el.innerHTML = '<p style="color:#64748b;font-size:12px;text-align:center">Ranking histórico: sin torneos todavía</p>';
+    return;
+  }
+  el.innerHTML = `
+    <p style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Ranking histórico de torneos</p>
+    ${items.map(t => `
+      <div class="hist-row">
+        <div class="hist-title">${esc(t.tournamentName || 'Torneo')}</div>
+        <div class="hist-meta">${esc(shortDate(t.date))} · Ganador: ${esc(t.winner || 'Nadie')}</div>
+        <div class="hist-results">${(t.results || []).map((r, i) =>
+          `${i + 1}. ${esc(r.name)}: ${r.totalScore || 0} pts, ${r.totalWords || 0} palabras${r.left ? ' · abandonó' : ''}`
+        ).join('<br>')}</div>
+      </div>`).join('')}`;
+}
+
+function initAudio() {
+  if (audioCtx || !audioEnabled) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  audioCtx = new AC();
+  musicGain = audioCtx.createGain();
+  musicGain.gain.value = 0.045;
+  musicGain.connect(audioCtx.destination);
+}
+
+function playTone(freq, dur, gain = 0.06, type = 'sine') {
+  if (!audioEnabled) return;
+  initAudio();
+  if (!audioCtx || !musicGain) return;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(gain, audioCtx.currentTime + 0.03);
+  g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+  osc.connect(g); g.connect(musicGain);
+  osc.start();
+  osc.stop(audioCtx.currentTime + dur + 0.03);
+}
+
+function startMusic(suspense) {
+  if (!audioEnabled) return;
+  initAudio();
+  if (!audioCtx) return;
+  if (lastSuspense === suspense && musicIv) return;
+  stopMusic(false);
+  lastSuspense = suspense;
+  const notes = suspense ? [196, 207.65, 220, 233.08] : [261.63, 329.63, 392, 329.63];
+  let i = 0;
+  musicIv = setInterval(() => {
+    playTone(notes[i++ % notes.length], suspense ? 0.16 : 0.28, suspense ? 0.07 : 0.045, suspense ? 'sawtooth' : 'triangle');
+  }, suspense ? 280 : 650);
+  if (suspense) {
+    suspenseIv = setInterval(() => playTone(98, 0.08, 0.035, 'square'), 900);
+  }
+}
+
+function stopMusic(resetMode = true) {
+  clearInterval(musicIv); clearInterval(suspenseIv);
+  musicIv = null; suspenseIv = null;
+  if (resetMode) lastSuspense = false;
+}
+
+function toggleAudio() {
+  audioEnabled = !audioEnabled;
+  document.getElementById('audio-btn').textContent = audioEnabled ? 'Audio: sí' : 'Audio: no';
+  if (!audioEnabled) stopMusic();
+  else if (G?.phase === 'PLAYING') startMusic(false);
+}
+
+// ── LOGIN ─────────────────────────────────────────────────────────────────────
+function doLogin() {
+  const n = document.getElementById('name-in').value.trim();
+  if (!n) { toast('Escribe tu nombre primero'); return; }
+  initAudio();
+  pendingName = n; setUrls();
+  if (socket.connected) emitJoin(n);
+  else { toast('Conectando...'); socket.connect(); }
+}
+
+function emitJoin(n) {
+  if (hasJoined) return;
+  hasJoined = true;
+  socket.emit('join', n);
+  show('screen-lobby');
+}
+
+function startGame() {
+  initAudio();
+  socket.emit('start', {
+    tournamentName: document.getElementById('cfg-name').value,
+    category: document.getElementById('cfg-cat').value,
+    rounds: document.getElementById('cfg-rounds').value,
+    timePerRound: document.getElementById('cfg-time').value
+  });
+}
+
+// ── RESET: emitir al servidor y esperar señal ─────────────────────────────────
+function doReset() {
+  socket.emit('reset');
+  // No cambiamos pantalla aquí — esperamos el evento reset_to_lobby del servidor
+}
+
+function leaveGame() {
+  if (G && ['PLAYING','INTERMISSION'].includes(G.phase) && !confirm('¿Abandonar la partida? Si queda un solo jugador, será declarado vencedor.')) return;
+  hasJoined = false; pendingName = null; G = null; lastBoardSig = '';
+  clearInterval(timerIv); clearInterval(interIv);
+  stopMusic();
+  show('screen-login');
+  socket.emit('leave', () => socket.disconnect());
+  setTimeout(() => { if (socket.connected && !hasJoined) socket.disconnect(); }, 400);
+}
+
+// ── SOCKET EVENTOS ────────────────────────────────────────────────────────────
+socket.on('connect', () => {
+  myId = socket.id;
+  if (pendingName && !hasJoined) emitJoin(pendingName);
+});
+
+socket.on('disconnect', () => {
+  if (hasJoined) toast('Reconectando...');
+});
+
+socket.on('error_msg', msg => toast('⚠️ ' + msg, '#7c2d12', '#fef3c7'));
+
+// ── SEÑAL EXPLÍCITA DE RESET → todos vuelven al lobby ────────────────────────
+socket.on('reset_to_lobby', () => {
+  if (!hasJoined) return;
+  clearInterval(timerIv); clearInterval(interIv);
+  stopMusic();
+  lastBoardSig = '';
+  show('screen-lobby');
+  toast('Nueva partida — ¡configura y arranca!', '#1e3a5f', '#93c5fd');
+});
+
+socket.on('state', state => {
+  if (!hasJoined) return;
+  G = state;
+  isAdmin = G.players[myId]?.isAdmin || false;
+  myColor = G.players[myId]?.color || '#3b82f6';
+
+  if (state.phase === 'LOBBY') renderLobby();
+  else if (state.phase === 'PLAYING') renderGame();
+  else if (state.phase === 'INTERMISSION') renderInter();
+  else if (state.phase === 'END') renderEnd();
+});
+
+socket.on('found', ({ word, by, name, pts, color }) => {
+  if (!hasJoined) return;
+  if (by === myId) toast(`¡Encontraste ${word}! +${pts}pts`, color, '#fff');
+  else toast(`${name} encontró ${word} +${pts}pts`, color, '#fff');
+  // Colorear celdas con el color del primer descubridor
+  if (G && G.wordCoords[word] && !G.foundWords.includes(word)) {
+    G.wordCoords[word].forEach(({ r, c }) => {
+      const el = document.querySelector(`[data-r="${r}"][data-c="${c}"]`);
+      if (el) { el.classList.add('found'); el.style.background = color; el.classList.remove('sel'); }
+    });
+  }
+  renderWordList();
+});
+
+// ── RENDER LOBBY ──────────────────────────────────────────────────────────────
+function renderLobby() {
+  stopMusic();
+  show('screen-lobby'); setUrls();
+  const pls = Object.values(G.players);
+  document.getElementById('player-list').innerHTML = `
+    <p style="color:#64748b;font-size:11px;margin-bottom:8px;text-align:center">${pls.length} jugador${pls.length === 1 ? '' : 'es'} conectado${pls.length === 1 ? '' : 's'} contando al admin</p>
+    ${pls.map(p => `
+    <div class="prow">
+      <div class="dot" style="background:${p.color}"></div>
+      <span style="flex:1;font-weight:600;color:#e2e8f0">${esc(p.name)}</span>
+      ${p.isAdmin ? '<span style="color:#fbbf24;font-size:11px;font-weight:700">ADMIN</span>' : ''}
+      ${p.id === myId && !p.isAdmin ? '<span style="color:#3b82f6;font-size:11px">tú</span>' : ''}
+    </div>`).join('') || '<p style="color:#475569;font-size:13px;text-align:center;padding:6px">Esperando jugadores...</p>'}`;
+  document.getElementById('admin-cfg').style.display = isAdmin ? 'block' : 'none';
+  document.getElementById('wait-msg').style.display = isAdmin ? 'none' : 'block';
+  document.getElementById('min-warn').style.display = pls.length < 2 ? 'block' : 'none';
+  const nameEl = document.getElementById('cfg-name');
+  if (nameEl && !nameEl.value) nameEl.value = G.config?.tournamentName || `Torneo ${new Date().toLocaleDateString('es-MX')}`;
+  renderHistory('history-lobby');
+}
+
+// ── RENDER GAME ───────────────────────────────────────────────────────────────
+function renderGame() {
+  show('screen-game');
+  const me = G.players[myId];
+  const myW = me?.wordsFound || 0, total = G.words.length;
+
+  document.getElementById('hud-round').textContent = `${G.currentRound}/${G.config.rounds}`;
+  document.getElementById('hud-cat').textContent = G.config.category;
+  document.getElementById('hud-mywords').textContent = `${myW}/${total}`;
+  document.getElementById('hud-prog').style.width = total ? `${Math.round(myW / total * 100)}%` : '0%';
+
+  const sorted = Object.values(G.players).sort((a, b) => (b.wordsFound || 0) - (a.wordsFound || 0));
+  document.getElementById('players-bar').innerHTML = sorted.map((p, i) => `
+    <div class="p-chip ${p.id === myId ? 'me' : ''}">
+      <span style="color:#475569;font-size:10px">#${i + 1}</span>
+      <div class="dot" style="background:${p.color}"></div>
+      <span style="font-size:12px;color:#e2e8f0;font-weight:600;max-width:65px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</span>
+      <span style="font-size:12px;font-weight:900;color:${p.color}">${p.wordsFound || 0}/${total}</span>
+    </div>`).join('');
+
+  renderWordList();
+  const sig = G.board.map(r => r.join('')).join('|');
+  if (sig !== lastBoardSig) { buildBoard(); lastBoardSig = sig; }
+  else updateFoundCells();
+  startTimer(G.roundEndsAt, G.config.timePerRound);
+}
+
+function renderWordList() {
+  if (!G) return;
+  const me = G.players[myId];
+  const myFW = me?.myFoundWords || [];
+  document.getElementById('wcount').textContent = `${myFW.length}/${G.words.length}`;
+  document.getElementById('witems').innerHTML = G.words.map(w => {
+    const iMine = myFW.includes(w);
+    const first = G.foundWords.includes(w) ? G.players[G.foundBy[w]] : null;
+    return `<div class="witem ${iMine ? 'done' : first ? 'mine' : 'pending'}">
+      <span class="wn">${w}</span>
+      ${iMine ? '<span style="color:#6ee7b7;font-size:12px">✓</span>' : first ? `<div class="wfd" style="background:${first.color}"></div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── TABLERO ───────────────────────────────────────────────────────────────────
+function buildBoard() {
+  const el = document.getElementById('board');
+  const size = G.board.length;
+  el.style.gridTemplateColumns = `repeat(${size},1fr)`;
+  el.innerHTML = '';
+  G.board.forEach((row, r) => row.forEach((ch, c) => {
+    const letter = (ch || '').toString().trim().slice(0, 1).toUpperCase() || '?';
+    const d = document.createElement('div');
+    d.className = 'cell notranslate'; d.textContent = letter; d.dataset.letter = letter; d.dataset.r = r; d.dataset.c = c;
+    d.setAttribute('translate', 'no');
+    const fw = G.foundWords.find(w => (G.wordCoords[w] || []).some(p => p.r === r && p.c === c));
+    if (fw) { d.classList.add('found'); const f = G.players[G.foundBy[fw]]; if (f) d.style.background = f.color; }
+    d.addEventListener('mousedown', () => selStart(d, r, c));
+    d.addEventListener('mouseenter', () => selMove(d, r, c));
+    d.addEventListener('touchstart', e => { e.preventDefault(); selStart(d, r, c); }, { passive: false });
+    d.addEventListener('touchmove', e => {
+      e.preventDefault();
+      const t = e.touches[0], over = document.elementFromPoint(t.clientX, t.clientY);
+      if (over && over.classList.contains('cell')) selMove(over, +over.dataset.r, +over.dataset.c);
+    }, { passive: false });
+    el.appendChild(d);
+  }));
+  el.addEventListener('mouseup', selEnd);
+  el.addEventListener('touchend', selEnd);
+  el.addEventListener('mouseleave', () => { pressing = false; clearSel(); });
+}
+
+function updateFoundCells() {
+  G.foundWords.forEach(w => {
+    const f = G.players[G.foundBy[w]];
+    (G.wordCoords[w] || []).forEach(({ r, c }) => {
+      const d = document.querySelector(`[data-r="${r}"][data-c="${c}"]`);
+      if (d && !d.classList.contains('found')) { d.classList.add('found'); if (f) d.style.background = f.color; d.classList.remove('sel'); }
+    });
+  });
+}
+
+// ── SELECCIÓN 8 DIRECCIONES ───────────────────────────────────────────────────
+function selStart(el, r, c) {
+  pressing = true; selDir = null;
+  selCells = [{ el, r, c, ch: el.dataset.letter || el.textContent.trim().slice(0, 1) }];
+  el.classList.add('sel'); el.style.background = myColor;
+}
+
+function selMove(el, r, c) {
+  if (!pressing) return;
+  if (selCells.some(s => s.r === r && s.c === c)) return;
+  const last = selCells[selCells.length - 1];
+  const dr = r - last.r, dc = c - last.c;
+  if (selCells.length === 1) {
+    if (Math.abs(dr) > 1 || Math.abs(dc) > 1 || (dr === 0 && dc === 0)) return;
+    selDir = { dr, dc };
+  } else {
+    if (dr !== selDir.dr || dc !== selDir.dc) return;
+  }
+  selCells.push({ el, r, c, ch: el.dataset.letter || el.textContent.trim().slice(0, 1) });
+  el.classList.add('sel'); el.style.background = myColor;
+}
+
+function clearSel() {
+  selCells.forEach(s => { if (!s.el.classList.contains('found')) { s.el.classList.remove('sel'); s.el.style.background = ''; } });
+  selCells = []; selDir = null;
+}
+
+function selEnd() {
+  if (!pressing) return; pressing = false;
+  if (selCells.length > 1) {
+    socket.emit('word', { word: selCells.map(s => s.ch).join(''), coords: selCells.map(s => ({ r: s.r, c: s.c })) });
+  }
+  clearSel();
+}
+
+// ── TIMER ─────────────────────────────────────────────────────────────────────
+function startTimer(endsAt, total) {
+  clearInterval(timerIv);
+  const arc = document.getElementById('ring-arc'), txt = document.getElementById('ring-n');
+  function tick() {
+    const s = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+    const pct = s / total;
+    arc.setAttribute('stroke-dashoffset', CIRC * (1 - pct));
+    const col = pct > .5 ? '#22c55e' : pct > .2 ? '#f59e0b' : '#ef4444';
+    arc.setAttribute('stroke', col); txt.setAttribute('fill', col);
+    const m = Math.floor(s / 60), ss = s % 60;
+    txt.textContent = m > 0 ? `${m}:${ss < 10 ? '0' + ss : ss}` : String(s);
+    startMusic(s <= 60);
+  }
+  tick(); timerIv = setInterval(tick, 500);
+}
+
+// ── INTERMISSION ──────────────────────────────────────────────────────────────
+function renderInter() {
+  clearInterval(timerIv); clearInterval(interIv);
+  stopMusic();
+  show('screen-inter');
+  document.getElementById('inter-winner').textContent = '🏆 ' + (G.winner || '');
+  document.getElementById('inter-reason').textContent = G.winReason || '';
+  let cd = 6; document.getElementById('inter-cd').textContent = cd;
+  interIv = setInterval(() => {
+    const el = document.getElementById('inter-cd');
+    if (el) el.textContent = Math.max(0, --cd);
+    if (cd <= 0) clearInterval(interIv);
+  }, 1000);
+  document.getElementById('lb-inter').innerHTML = lbHTML(G);
+}
+
+// ── END ───────────────────────────────────────────────────────────────────────
+function renderEnd() {
+  clearInterval(timerIv);
+  stopMusic();
+  show('screen-end');
+  document.getElementById('winner-lbl').textContent = '🏆 ' + (G.winner || 'Nadie');
+  document.getElementById('win-reason-lbl').textContent = G.winReason || '';
+  document.getElementById('lb-end').innerHTML = lbHTML(G);
+  renderHistory('history-end');
+  document.getElementById('btn-reset').style.display = isAdmin ? 'block' : 'none';
+  document.getElementById('reset-note').style.display = isAdmin ? 'none' : 'block';
+}
+
+// ── LEADERBOARD ───────────────────────────────────────────────────────────────
+function lbHTML(state) {
+  const m = ['🥇', '🥈', '🥉'];
+  const rows = state.finalResults?.length ? state.finalResults : Object.values(state.players);
+  return rows
+    .sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0))
+    .map((p, i) => `
+    <div class="lb-row">
+      <div class="lb-pos">${m[i] || '#' + (i + 1)}</div>
+      <div class="dot" style="background:${p.color}"></div>
+      <div>
+        <div class="lb-name">${esc(p.name)}${p.left ? ' · abandonó' : ''}${p.active ? ' · activo' : ''}</div>
+        <div class="lb-sub">${p.totalWords || p.wordsFound || 0} palabras encontradas</div>
+      </div>
+      <div class="lb-pts">${p.totalScore || 0}<span style="color:#64748b;font-size:10px;font-weight:400"> pts</span></div>
+    </div>`).join('');
+}
+
+setUrls();
+document.getElementById('cfg-name').value = `Torneo ${new Date().toLocaleDateString('es-MX')}`;
+</script>
+</body>
+</html>
