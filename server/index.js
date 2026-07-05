@@ -93,12 +93,12 @@ function genBoard(cat, size = 14) {
   let available = [...new Set(raw.map(clean))]
     .filter(w => w.length >= 3 && w.length <= size - 2 && !usedWords[cat].includes(w));
 
-  if (available.length < 8) {
+  if (available.length < 15) {
     usedWords[cat] = [];
     available = [...new Set(raw.map(clean))].filter(w => w.length >= 3 && w.length <= size - 2);
   }
 
-  const selected = available.sort(() => Math.random() - .5).slice(0, 10);
+  const selected = available.sort(() => Math.random() - .5).slice(0, 15);
   usedWords[cat].push(...selected);
 
   const placed = [], coords = {};
