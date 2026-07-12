@@ -381,6 +381,10 @@ io.on('connection', socket => {
     const p = G.players[socket.id];
     if (!p.myFoundWords) p.myFoundWords = [];
     if (p.myFoundWords.includes(w)) return;
+    if (G.foundWords.includes(w)) {
+      socket.emit('error_msg', `${w} ya fue encontrada por ${G.players[G.foundBy[w]]?.name || 'otro jugador'}`);
+      return;
+    }
 
     // Validar coordenadas contra las reales del servidor
     const real = G.wordCoords[w];
@@ -397,10 +401,8 @@ io.on('connection', socket => {
     p.score = (p.score || 0) + pts;
     syncParticipants();
 
-    if (!G.foundWords.includes(w)) {
-      G.foundWords.push(w);
-      G.foundBy[w] = socket.id;
-    }
+    G.foundWords.push(w);
+    G.foundBy[w] = socket.id;
 
     io.emit('found', { word: w, by: socket.id, name: p.name, pts, color: p.color, wordsFound: p.wordsFound, total: G.words.length });
     io.emit('state', G);
