@@ -14,14 +14,30 @@ input,select,button{font-family:inherit}
   opacity:0;transition:opacity .3s;pointer-events:none}
 #toast.show{opacity:1}
 .card{background:#1e293b;border:1px solid #334155;border-radius:16px;padding:18px}
-#board-wrap{overflow:auto;max-width:100vw;-webkit-overflow-scrolling:touch}
-#board{display:inline-grid;gap:2px;padding:8px;background:#1e293b;border-radius:14px;border:1px solid #334155}
-.cell{width:32px;height:32px;min-width:32px;min-height:32px;display:flex;align-items:center;justify-content:center;
+#game-main{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;justify-content:center;width:100%;max-width:940px}
+#board-wrap{overflow:visible;max-width:100%;display:flex;justify-content:center;-webkit-overflow-scrolling:touch}
+#board{--cell-size:32px;display:inline-grid;gap:2px;padding:8px;background:#1e293b;border-radius:14px;border:1px solid #334155}
+.cell{width:var(--cell-size);height:var(--cell-size);min-width:var(--cell-size);min-height:var(--cell-size);display:flex;align-items:center;justify-content:center;
   font-weight:900;font-size:14px;border-radius:5px;cursor:pointer;background:#334155;color:#94a3b8;
   transition:background .06s,transform .06s;user-select:none;-webkit-user-select:none;touch-action:none;overflow:hidden}
 .cell.sel{color:#fff;transform:scale(1.1);box-shadow:0 2px 10px #0006;z-index:2;position:relative}
 .cell.found{color:#fff}
-@media(max-width:400px){.cell{width:27px;height:27px;min-width:27px;min-height:27px;font-size:11px}}
+@media(max-width:720px){
+  #screen-game{padding:6px 4px}
+  #hud{padding:8px;max-width:100%;gap:6px}
+  .game-actions{max-width:100%;justify-content:center}
+  #game-main{display:grid;grid-template-columns:1fr;gap:8px;justify-items:center;max-width:100%}
+  #board{--cell-size:calc((100vw - 34px) / 14);gap:1px;padding:5px;border-radius:10px}
+  .cell{font-size:clamp(10px,2.7vw,14px);border-radius:4px}
+  #wordlist{width:calc(100vw - 12px);min-width:0;align-self:auto;padding:8px}
+  #witems{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+  .witem{margin-bottom:0;padding:5px 7px;min-width:0}
+  .wn{font-size:10px;letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
+@media(max-width:360px){
+  #board{--cell-size:calc((100vw - 26px) / 14);padding:4px}
+  #witems{grid-template-columns:1fr}
+}
 .screen{display:none;width:100%;padding:10px 8px}
 .screen.active{display:block}
 #screen-game{display:none;flex-direction:column;align-items:center;padding:8px 4px}
@@ -105,6 +121,7 @@ select.cfg{width:100%;background:#0f172a;color:#f1f5f9;border:1px solid #475569;
         padding:12px 16px;color:#f1f5f9;font-size:16px;margin-bottom:10px;outline:none;display:block"
       onkeydown="if(event.key==='Enter')doLogin()">
     <button class="btn btn-green" style="margin-top:0" onclick="doLogin()">ENTRAR AL LOBBY 🚀</button>
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="clearActiveSessions()">Cerrar sesiones activas</button>
   </div>
 </div>
 
@@ -159,7 +176,6 @@ select.cfg{width:100%;background:#0f172a;color:#f1f5f9;border:1px solid #475569;
         <select id="cfg-rounds" class="cfg">
           <option value="1">1</option>
           <option value="3" selected>3</option>
-          <option value="5">5</option>
         </select>
       </div>
       <div>
@@ -207,7 +223,7 @@ select.cfg{width:100%;background:#0f172a;color:#f1f5f9;border:1px solid #475569;
     <button class="btn btn-red" onclick="leaveGame()">Abandonar partida</button>
   </div>
   <div id="players-bar"></div>
-  <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;justify-content:center;width:100%;max-width:940px">
+  <div id="game-main">
     <div id="board-wrap"><div id="board"></div></div>
     <div id="wordlist"><h4>Palabras <span id="wcount">0/0</span></h4><div id="witems"></div></div>
   </div>
@@ -391,6 +407,16 @@ function doLogin() {
   else { toast('Conectando...'); socket.connect(); }
 }
 
+function clearActiveSessions() {
+  if (!confirm('¿Cerrar todas las sesiones activas y limpiar el lobby?')) return;
+  socket.emit('clear_sessions');
+  hasJoined = false; pendingName = null; G = null; lastBoardSig = '';
+  clearInterval(timerIv); clearInterval(interIv);
+  stopMusic();
+  show('screen-login');
+  toast('Sesiones cerradas. Ya pueden entrar de nuevo.', '#1e3a5f', '#93c5fd');
+}
+
 function emitJoin(n) {
   if (hasJoined) return;
   hasJoined = true;
@@ -444,6 +470,14 @@ socket.on('reset_to_lobby', () => {
   lastBoardSig = '';
   show('screen-lobby');
   toast('Nueva partida — ¡configura y arranca!', '#1e3a5f', '#93c5fd');
+});
+
+socket.on('sessions_cleared', () => {
+  hasJoined = false; pendingName = null; G = null; lastBoardSig = '';
+  clearInterval(timerIv); clearInterval(interIv);
+  stopMusic();
+  show('screen-login');
+  toast('Sesiones cerradas. Entra de nuevo al lobby.', '#1e3a5f', '#93c5fd');
 });
 
 socket.on('state', state => {
