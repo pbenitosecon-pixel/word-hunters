@@ -31,8 +31,9 @@ input,select,button{font-family:inherit}
   .cell{font-size:clamp(10px,2.7vw,14px);border-radius:4px}
   #wordlist{width:calc(100vw - 12px);min-width:0;align-self:auto;padding:8px}
   #witems{display:grid;grid-template-columns:1fr 1fr;gap:4px}
-  .witem{margin-bottom:0;padding:5px 7px;min-width:0}
-  .wn{font-size:10px;letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .witem{margin-bottom:0;padding:5px 7px;min-width:0;align-items:flex-start;gap:6px}
+  .wn{font-size:10px;letter-spacing:0;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.15}
+  .finder{max-width:72px;align-items:flex-start;padding-top:1px}
 }
 @media(max-width:360px){
   #board{--cell-size:calc((100vw - 26px) / 14);padding:4px}
@@ -96,6 +97,23 @@ select.cfg{width:100%;background:#0f172a;color:#f1f5f9;border:1px solid #475569;
 .hist-title{font-size:13px;font-weight:800;color:#e2e8f0}
 .hist-meta{font-size:10px;color:#64748b;margin:2px 0 6px}
 .hist-results{font-size:11px;color:#94a3b8;line-height:1.5}
+@media(max-width:720px){
+  #screen-game{padding:6px 4px}
+  #hud{padding:8px;max-width:100%;gap:6px}
+  .game-actions{max-width:100%;justify-content:center}
+  #game-main{display:grid;grid-template-columns:1fr;gap:8px;justify-items:center;max-width:100%}
+  #board{--cell-size:calc((100vw - 34px) / 14);gap:1px;padding:5px;border-radius:10px}
+  .cell{font-size:clamp(10px,2.7vw,14px);border-radius:4px}
+  #wordlist{width:calc(100vw - 12px);min-width:0;align-self:auto;padding:8px}
+  #witems{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+  .witem{margin-bottom:0;padding:5px 7px;min-width:0;align-items:flex-start;gap:6px}
+  .wn{font-size:10px;letter-spacing:0;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.15}
+  .finder{max-width:72px;align-items:flex-start;padding-top:1px}
+}
+@media(max-width:360px){
+  #board{--cell-size:calc((100vw - 26px) / 14);padding:4px}
+  #witems{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body translate="no" class="notranslate">
@@ -443,7 +461,7 @@ function doReset() {
 }
 
 function leaveGame() {
-  if (G && ['PLAYING','INTERMISSION'].includes(G.phase) && !confirm('¿Abandonar la partida? Si queda un solo jugador, será declarado vencedor.')) return;
+  if (G && ['PLAYING','INTERMISSION'].includes(G.phase) && !confirm('¿Seguro que quieres abandonar la partida?\n\nTu salida quedará registrada y, si solo queda un jugador activo, será declarado vencedor.')) return;
   hasJoined = false; pendingName = null; G = null; lastBoardSig = '';
   clearInterval(timerIv); clearInterval(interIv);
   stopMusic();
