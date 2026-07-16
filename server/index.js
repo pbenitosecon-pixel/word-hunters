@@ -94,6 +94,30 @@ function freshState() {
   };
 }
 
+function nextPlayerColor(reserved = new Set()) {
+  for (let i = 0; i < PLAYER_COLORS.length; i++) {
+    const color = PLAYER_COLORS[(colorIdx + i) % PLAYER_COLORS.length];
+    if (!reserved.has(color)) {
+      colorIdx = (colorIdx + i + 1) % PLAYER_COLORS.length;
+      return color;
+    }
+  }
+  const color = PLAYER_COLORS[colorIdx % PLAYER_COLORS.length];
+  colorIdx = (colorIdx + 1) % PLAYER_COLORS.length;
+  return color;
+}
+
+function normalizePlayerColors() {
+  const used = new Set();
+  Object.values(G.players).forEach(p => {
+    if (!p.color || used.has(p.color)) {
+      p.color = nextPlayerColor(used);
+    }
+    used.add(p.color);
+    if (G.participants[p.id]) G.participants[p.id].color = p.color;
+  });
+}
+
 function defaultTournamentName() {
   return `Torneo ${new Date().toLocaleDateString('es-MX')}`;
 }
@@ -171,6 +195,7 @@ function startRound() {
 }
 
 function syncParticipants() {
+  normalizePlayerColors();
   Object.values(G.players).forEach(p => {
     G.participants[p.id] = {
       id: p.id,
@@ -328,7 +353,7 @@ io.on('connection', socket => {
       name: clean(name).slice(0,16) || (name||'').trim().slice(0,16) || 'Jugador',
       score: 0, totalScore: 0, wordsFound: 0, totalWords: 0,
       myFoundWords: [],
-      color: PLAYER_COLORS[colorIdx++ % PLAYER_COLORS.length],
+      color: nextPlayerColor(new Set(Object.values(G.players).map(p => p.color))),
       isAdmin: isFirst
     };
     // Preservar nombre original (con tildes)
@@ -343,6 +368,7 @@ io.on('connection', socket => {
       active: true
     };
     if (isFirst) G.adminId = socket.id;
+    normalizePlayerColors();
     io.emit('state', G);
   });
 
@@ -366,6 +392,7 @@ io.on('connection', socket => {
     G.currentRound = 0; G.winner = null; G.winReason = null;
     G.finalResults = [];
     usedWords = {};
+    normalizePlayerColors();
     Object.values(G.players).forEach(p => {
       p.totalScore = 0; p.score = 0; p.wordsFound = 0; p.totalWords = 0; p.myFoundWords = [];
       G.participants[p.id] = { id: p.id, name: p.name, color: p.color, totalScore: 0, totalWords: 0, left: false, active: true };
@@ -437,6 +464,7 @@ io.on('connection', socket => {
       G.players[p.id] = p;
     });
     G.adminId = prevAdmin;
+    normalizePlayerColors();
 
     // Emitir nuevo estado LOBBY a todos — todos verán la sala de espera
     io.emit('state', G);
